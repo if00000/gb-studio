@@ -45,7 +45,7 @@ export const MenuWrapper = styled.div<MenuWrapperProps>`
       : ""}
 `;
 
-export const Wrapper = styled.div`
+export const DropdownButtonWrapper = styled.div`
   position: relative;
   flex-shrink: 0;
   [aria-expanded="false"] + ${MenuWrapper} {
@@ -67,6 +67,7 @@ export const ArrowWrapper = styled.div`
 `;
 
 export const DropdownButton: FC<DropdownButtonProps & ButtonProps> = ({
+  id,
   size,
   variant,
   label,
@@ -103,8 +104,9 @@ export const DropdownButton: FC<DropdownButtonProps & ButtonProps> = ({
   });
 
   return (
-    <Wrapper>
+    <DropdownButtonWrapper>
       <Button
+        id={id}
         title={title}
         size={size}
         variant={variant}
@@ -136,7 +138,7 @@ export const DropdownButton: FC<DropdownButtonProps & ButtonProps> = ({
           </RelativePortal>
         </MenuWrapper>
       )}
-    </Wrapper>
+    </DropdownButtonWrapper>
   );
 };
 

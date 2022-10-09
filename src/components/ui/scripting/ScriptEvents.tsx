@@ -254,7 +254,7 @@ export const ScriptEventFormWrapper = styled.div<ScriptEventFormWrapperProps>`
 export const ScriptEventFields = styled.div`
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;
   padding: 5px;
 
   & > * {
@@ -406,7 +406,6 @@ export const ScriptEventFieldGroupWrapper = styled.div<ScriptEventFieldGroupProp
       : ""}
   & > div {
     margin: -10px;
-    flex-wrap: nowrap;
   }
 `;
 

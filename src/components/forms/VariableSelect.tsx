@@ -38,9 +38,10 @@ interface VariableSelectProps extends SelectCommonProps {
   onChangeUnits?: (newUnits: UnitType) => void;
 }
 
-const Wrapper = styled.div`
+export const VariableSelectWrapper = styled.div`
   position: relative;
   width: 100%;
+  min-width: 78px;
 `;
 
 const Select = styled(DefaultSelect)`
@@ -75,7 +76,7 @@ const VariableRenameButton = styled.button`
   background: ${(props) => props.theme.colors.input.background};
   border-color: ${(props) => props.theme.colors.input.background};
 
-  ${Wrapper}:hover & {
+  ${VariableSelectWrapper}:hover & {
     opacity: 1;
   }
 
@@ -261,7 +262,7 @@ export const VariableSelect: FC<VariableSelectProps> = ({
   };
 
   return (
-    <Wrapper onClick={onJumpToVariable}>
+    <VariableSelectWrapper onClick={onJumpToVariable}>
       {renameVisible ? (
         <VariableRenameInput
           key={renameId}
@@ -306,6 +307,6 @@ export const VariableSelect: FC<VariableSelectProps> = ({
           onChange={onChangeUnits}
         />
       )}
-    </Wrapper>
+    </VariableSelectWrapper>
   );
 };

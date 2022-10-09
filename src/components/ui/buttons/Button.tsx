@@ -4,6 +4,7 @@ import styled, { css } from "styled-components";
 import { ThemeInterface } from "../theme/ThemeInterface";
 
 export interface ButtonProps {
+  readonly id?: string;
   readonly size?: "small" | "medium" | "large";
   readonly variant?: "normal" | "primary" | "transparent";
   readonly selected?: boolean;

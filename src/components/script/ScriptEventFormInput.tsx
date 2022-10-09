@@ -349,14 +349,12 @@ const ScriptEventFormInput = ({
     );
   } else if (type === "value") {
     return (
-      <OffscreenSkeletonInput>
-        <ValueSelect
-          name={id}
-          entityId={entityId}
-          value={isScriptValue(value) ? value : undefined}
-          onChange={onChangeField}
-        />
-      </OffscreenSkeletonInput>
+      <ValueSelect
+        name={id}
+        entityId={entityId}
+        value={isScriptValue(value) ? value : undefined}
+        onChange={onChangeField}
+      />
     );
   } else if (type === "palette") {
     if (field.paletteType === "ui") {

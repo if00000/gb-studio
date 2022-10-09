@@ -14,9 +14,10 @@ export interface NumberInputProps
   onChangeUnits?: (newUnits: UnitType) => void;
 }
 
-const Wrapper = styled.div`
+export const NumberInputWrapper = styled.div`
   position: relative;
   width: 100%;
+  min-width: 45px;
 `;
 
 export const NumberInput: FC<NumberInputProps> = ({
@@ -28,7 +29,7 @@ export const NumberInput: FC<NumberInputProps> = ({
   placeholder,
   ...props
 }) => (
-  <Wrapper>
+  <NumberInputWrapper>
     <Input
       type="number"
       value={value || ""}
@@ -43,7 +44,7 @@ export const NumberInput: FC<NumberInputProps> = ({
         onChange={onChangeUnits}
       />
     )}
-  </Wrapper>
+  </NumberInputWrapper>
 );
 
 NumberInput.defaultProps = {
