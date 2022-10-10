@@ -10,6 +10,7 @@ import {
   BlankIcon,
   CheckIcon,
   CrossIcon,
+  DiceIcon,
   DivideIcon,
   ExpressionIcon,
   MinusIcon,
@@ -98,7 +99,7 @@ type ScriptValue =
       valueB?: ScriptValue;
     };
 
-type ValueFunction = "add" | "sub" | "mul" | "div";
+type ValueFunction = "add" | "sub" | "mul" | "div" | "rnd";
 type ValueAtom = "number" | "variable" | "property" | "expression";
 
 type ValueFunctionMenuItem = {
@@ -112,6 +113,7 @@ const functionSymbolLookup: Record<ValueFunction, string> = {
   sub: "-",
   mul: "*",
   div: "/",
+  rnd: "",
 };
 
 const functionIconLookup: Record<ValueFunction, JSX.Element> = {
@@ -119,13 +121,14 @@ const functionIconLookup: Record<ValueFunction, JSX.Element> = {
   sub: <MinusIcon />,
   mul: <CrossIcon />,
   div: <DivideIcon />,
+  rnd: <DiceIcon />,
 };
 
 const atomIconLookup: Record<ValueAtom, JSX.Element> = {
   number: <NumberIcon />,
   variable: <VariableIcon />,
-  property: <ActorIcon />,
   expression: <ExpressionIcon />,
+  property: <ActorIcon />,
 };
 
 const functionMenuItems: ValueFunctionMenuItem[] = [
@@ -149,6 +152,11 @@ const functionMenuItems: ValueFunctionMenuItem[] = [
     label: "Divide",
     symbol: functionSymbolLookup["div"],
   },
+  {
+    value: "rnd",
+    label: "Random",
+    symbol: functionSymbolLookup["rnd"],
+  },
 ];
 
 const Wrapper = styled.div`
@@ -157,7 +165,8 @@ const Wrapper = styled.div`
 `;
 
 const OperatorWrapper = styled.div`
-  padding: 0 5px;
+  width: 24px;
+  flex-shrink: 0;
 `;
 
 interface ValueWrapperProps {
@@ -175,13 +184,26 @@ const ValueWrapper = styled.div<ValueWrapperProps>`
 const FunctionWrapper = styled.div<ValueWrapperProps>`
   display: flex;
   align-items: center;
+  border-radius: 8px;
+  flex-grow: 1;
+  ${(props) =>
+    props.hover
+      ? css`
+          background: #eee;
+        `
+      : ""}
+`;
+
+const BracketsWrapper = styled.div<ValueWrapperProps>`
+  display: flex;
+  align-items: center;
   padding: 0px 5px;
   border-radius: 8px;
   flex-wrap: wrap;
   flex-grow: 1;
 
   > * {
-    margin: 2.5px 0;
+    margin: 2.5px;
   }
 
   //   background: rgba(0, 0, 0, 0.1);
@@ -233,6 +255,13 @@ export const isScriptValue = (value: unknown): value is ScriptValue => {
   ) {
     return true;
   }
+  if (
+    scriptValue.type === "rnd" &&
+    (isScriptValue(scriptValue.valueA) || !scriptValue.valueA) &&
+    (isScriptValue(scriptValue.valueB) || !scriptValue.valueB)
+  ) {
+    return true;
+  }
 
   return false;
 };
@@ -247,7 +276,9 @@ interface ValueSelectProps {
 
 type ScriptValueFunction = ScriptValue & { type: ValueFunction };
 
-const isValueFunction = (value?: ScriptValue): value is ScriptValueFunction => {
+const isValueOperation = (
+  value?: ScriptValue
+): value is ScriptValueFunction => {
   return (
     !!value &&
     (value.type === "add" ||
@@ -266,7 +297,7 @@ const ValueSelect = ({
 }: ValueSelectProps) => {
   const [isHovered, setIsHovered] = useState(false);
 
-  const isValueFn = isValueFunction(value);
+  const isValueFn = isValueOperation(value);
 
   const focus = useCallback(() => {
     setTimeout(() => {
@@ -348,7 +379,7 @@ const ValueSelect = ({
         <MenuItem
           key={functionMenuItem.value}
           onClick={() => {
-            if (isValueFunction(value)) {
+            if (isValueOperation(value)) {
               onChange({
                 type: functionMenuItem.value,
                 valueA: value.valueA,
@@ -559,9 +590,89 @@ const ValueSelect = ({
       </ValueWrapper>
     );
   }
-  if (isValueFunction(value)) {
+  if (value.type === "rnd") {
     input = (
       <FunctionWrapper
+        hover={isHovered}
+        onMouseOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsHovered(true);
+        }}
+        onMouseOut={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsHovered(false);
+        }}
+      >
+        <OperatorWrapper>
+          <DropdownButton
+            id={name}
+            label={functionIconLookup[value.type]}
+            showArrow={false}
+            variant="transparent"
+            size="small"
+          >
+            {menu}
+            <MenuDivider />
+            <MenuItem
+              onClick={() => {
+                onChange(value.valueA);
+                focus();
+              }}
+            >
+              <MenuItemIcon>
+                <BlankIcon />
+              </MenuItemIcon>
+              Remove
+            </MenuItem>
+          </DropdownButton>
+        </OperatorWrapper>
+        <BracketsWrapper
+          hover={isHovered}
+          onMouseOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsHovered(true);
+          }}
+          onMouseOut={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsHovered(false);
+          }}
+        >
+          <ValueSelect
+            name={`${name}_valueA`}
+            entityId={entityId}
+            value={value.valueA}
+            onChange={(newValue) => {
+              onChange({
+                ...value,
+                valueA: newValue,
+              });
+            }}
+            innerValue
+          />
+
+          <ValueSelect
+            name={`${name}_valueB`}
+            entityId={entityId}
+            value={value.valueB}
+            onChange={(newValue) => {
+              onChange({
+                ...value,
+                valueB: newValue,
+              });
+            }}
+            innerValue
+          />
+        </BracketsWrapper>
+      </FunctionWrapper>
+    );
+  }
+  if (isValueOperation(value)) {
+    input = (
+      <BracketsWrapper
         hover={isHovered}
         onMouseOver={(e) => {
           e.preventDefault();
@@ -621,7 +732,7 @@ const ValueSelect = ({
           }}
           innerValue
         />
-      </FunctionWrapper>
+      </BracketsWrapper>
     );
   }
 

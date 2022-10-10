@@ -210,7 +210,11 @@ const ScriptEventFormField = memo(
       return (
         <ScriptEventField
           halfWidth={field.width === "50%"}
-          style={{ flexBasis: field.flexBasis, flexGrow: field.flexGrow }}
+          style={{
+            flexBasis: field.flexBasis,
+            flexGrow: field.flexGrow,
+            minWidth: field.minWidth,
+          }}
         >
           <ToggleableFormField
             name={genKey(scriptEventId, field.key || "")}
@@ -228,7 +232,11 @@ const ScriptEventFormField = memo(
       <ScriptEventField
         halfWidth={field.width === "50%"}
         inline={field.inline}
-        style={{ flexBasis: field.flexBasis, flexGrow: field.flexGrow }}
+        style={{
+          flexBasis: field.flexBasis,
+          flexGrow: field.flexGrow,
+          minWidth: field.minWidth,
+        }}
       >
         <FormField
           name={genKey(scriptEventId, field.key || "")}
@@ -241,7 +249,6 @@ const ScriptEventFormField = memo(
               : ""
           }
           title={field.description}
-          alignCheckbox={field.alignCheckbox}
         >
           {inputField}
         </FormField>

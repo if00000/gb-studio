@@ -89,7 +89,11 @@ const ScriptEventFields = ({
           return (
             <ScriptEventFieldGroupWrapper
               halfWidth={field.width === "50%"}
-              style={{ flexBasis: field.flexBasis, flexGrow: field.flexGrow }}
+              style={{
+                flexBasis: field.flexBasis,
+                flexGrow: field.flexGrow,
+                minWidth: field.minWidth,
+              }}
             >
               <ScriptEventFields
                 id={id}
