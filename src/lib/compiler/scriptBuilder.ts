@@ -2670,6 +2670,30 @@ extern void __mute_mask_${symbol};
     this._addNL();
   };
 
+  actorSetFrameToScriptValue = (actorId: string, value: ScriptValue) => {
+    const actorRef = this._declareLocal("actor", 4);
+    this._addComment("Actor Set Animation Frame To");
+    const [rpnOps, fetchOps] = precompileScriptValue(
+      optimiseScriptValue(value)
+    );
+    if (rpnOps.length === 1 && rpnOps[0].type === "number") {
+      this._setConst(this._localRef(actorRef, 1), rpnOps[0].value);
+    } else if (rpnOps.length === 1 && rpnOps[0].type === "variable") {
+      this._setToVariable(this._localRef(actorRef, 1), rpnOps[0].value);
+    } else {
+      const localsLookup = this._performFetchOperations(fetchOps);
+      this._addComment(`-- Calculate value`);
+      const rpn = this._rpn();
+      this._performValueRPN(rpn, rpnOps, localsLookup);
+      rpn.stop();
+      this._set(this._localRef(actorRef, 1), ".ARG0");
+      this._stackPop(1);
+    }
+    this.actorSetById(actorId);
+    this._actorSetAnimFrame(actorRef);
+    this._addNL();
+  };
+
   actorSetAnimate = (_enabled: boolean) => {
     console.error("actorSetAnimate not implemented");
   };

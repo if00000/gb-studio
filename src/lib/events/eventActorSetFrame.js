@@ -17,40 +17,24 @@ const fields = [
     description: l10n("FIELD_ACTOR_UPDATE_DESC"),
     type: "actor",
     defaultValue: "$self$",
+    flexBasis: 0,
+    minWidth: 150,
   },
   {
     key: "frame",
     label: l10n("FIELD_ANIMATION_FRAME"),
     description: l10n("FIELD_ANIMATION_FRAME_DESC"),
-    type: "union",
-    types: ["number", "variable", "property"],
-    defaultType: "number",
-    min: 0,
-    max: 25,
+    type: "value",
     defaultValue: {
-      number: 0,
-      variable: "LAST_VARIABLE",
-      property: "$self$:frame",
+      type: "number",
+      value: 0,
     },
   },
 ];
 
 const compile = (input, helpers) => {
-  const {
-    actorSetActive,
-    actorSetFrame,
-    actorSetFrameToVariable,
-    variableFromUnion,
-    temporaryEntityVariable,
-  } = helpers;
-  if (input.frame.type === "number") {
-    actorSetActive(input.actorId);
-    actorSetFrame(input.frame.value);
-  } else {
-    const frameVar = variableFromUnion(input.frame, temporaryEntityVariable(0));
-    actorSetActive(input.actorId);
-    actorSetFrameToVariable(frameVar);
-  }
+  const { actorSetFrameToScriptValue } = helpers;
+  actorSetFrameToScriptValue(input.actorId, input.frame);
 };
 
 module.exports = {

@@ -17,6 +17,8 @@ const fields = [
     description: l10n("FIELD_VARIABLE_DESC"),
     type: "variable",
     defaultValue: "LAST_VARIABLE",
+    flexBasis: 0,
+    minWidth: 150,
   },
   {
     key: "value",
