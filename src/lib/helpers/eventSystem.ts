@@ -513,6 +513,20 @@ const isPropertyField = (
   );
 };
 
+const isScriptValueField = (
+  cmd: any,
+  fieldName: any,
+  args: any,
+  lookup: EventLookup
+) => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const events = require("../events").default;
+  const event = events[cmd];
+  if (!event) return false;
+  const field = getField(cmd, fieldName, args, lookup);
+  return field && field.type === "value" && isFieldVisible(field, args);
+};
+
 const getCustomEventIdsInEvents = (events: any) => {
   const customEventIds: any = [];
   walkEvents(events, (event: any) => {
@@ -572,6 +586,7 @@ export {
   isVariableField,
   isActorField,
   isPropertyField,
+  isScriptValueField,
   getCustomEventIdsInEvents,
   getCustomEventIdsInScene,
   getCustomEventIdsInActor,

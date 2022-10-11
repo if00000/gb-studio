@@ -39,6 +39,7 @@ import {
   isVariableField,
   isActorField,
   mapEvents,
+  isScriptValueField,
 } from "../helpers/eventSystem";
 import compileEntityEvents from "./compileEntityEvents";
 import {
@@ -52,8 +53,15 @@ import {
   defaultVariableForContext,
   ScriptEditorContextType,
 } from "components/script/ScriptEditorContext";
-import { ScriptValue, ValueFunction } from "lib/scriptValue/types";
 import {
+  isScriptValue,
+  PrecompiledValueFetch,
+  PrecompiledValueRPNOperation,
+  ScriptValue,
+  ValueFunction,
+} from "lib/scriptValue/types";
+import {
+  mapScriptValueLeafNodes,
   optimiseScriptValue,
   precompileScriptValue,
   sortFetchOperations,
@@ -227,6 +235,16 @@ type ASMSFXPriority =
   | ".SFX_PRIORITY_MINIMAL"
   | ".SFX_PRIORITY_NORMAL"
   | ".SFX_PRIORITY_HIGH";
+
+type RPNHandler = {
+  ref: (variable: ScriptBuilderStackVariable) => RPNHandler;
+  refInd: (variable: ScriptBuilderStackVariable) => RPNHandler;
+  refVariable: (variable: ScriptBuilderVariable) => RPNHandler;
+  int8: (value: number | string) => RPNHandler;
+  int16: (value: number | string) => RPNHandler;
+  operator: (op: ScriptBuilderRPNOperation) => RPNHandler;
+  stop: () => void;
+};
 
 // - Helpers --------------
 
@@ -1116,7 +1134,7 @@ class ScriptBuilder {
     }
   };
 
-  _rpn = () => {
+  _rpn = (): RPNHandler => {
     const output: string[] = [];
     const stack: number[] = [];
 
@@ -2040,10 +2058,13 @@ extern void __mute_mask_${symbol};
     if (typeof id === "number") {
       this.actorIndex = id;
       this._setConst(addr, this.actorIndex);
-    } else if (typeof id === "string") {
+    } else if (typeof id === "string" && !id.startsWith(".SCRIPT_ARG")) {
       const newIndex = this.getActorIndex(id);
       this.actorIndex = newIndex;
       this._setConst(addr, this.actorIndex);
+    } else if (typeof id === "string") {
+      this.actorIndex = -1;
+      this._set(addr, id);
     } else {
       this.actorIndex = -1;
       this._set(addr, id.symbol);
@@ -2130,6 +2151,81 @@ extern void __mute_mask_${symbol};
       this._localRef(actorRef, 3),
       toASMMoveFlags(moveType, useCollisions)
     );
+    this._actorMoveTo(actorRef);
+    this._assertStackNeutral(stackPtr);
+    this._addNL();
+  };
+
+  actorMoveToScriptValues = (
+    actorId: string,
+    valueX: ScriptValue,
+    valueY: ScriptValue,
+    useCollisions: boolean,
+    moveType: ScriptBuilderMoveType,
+    units: DistanceUnitType = "tiles"
+  ) => {
+    const actorRef = this._declareLocal("actor", 4);
+    const stackPtr = this.stackPtr;
+    this._addComment("Actor Move To");
+
+    const [rpnOpsX, fetchOpsX] = precompileScriptValue(
+      optimiseScriptValue(valueX),
+      "x"
+    );
+    const [rpnOpsY, fetchOpsY] = precompileScriptValue(
+      optimiseScriptValue(valueY),
+      "y"
+    );
+
+    const localsLookup = this._performFetchOperations([
+      ...fetchOpsX,
+      ...fetchOpsY,
+    ]);
+
+    const rpn = this._rpn();
+
+    this._addComment(`-- Calculate coordinate values`);
+
+    // X Value
+    if (rpnOpsX.length === 1 && rpnOpsX[0].type === "number") {
+      // Number X value
+      rpn.int16(rpnOpsX[0].value);
+    } else if (rpnOpsX.length === 1 && rpnOpsX[0].type === "variable") {
+      // Variable X value
+      rpn.refVariable(rpnOpsX[0].value);
+    } else {
+      // Variable X value
+      this._performValueRPN(rpn, rpnOpsX, localsLookup);
+    }
+    rpn //
+      .int16((units === "tiles" ? 8 : 1) * 16)
+      .operator(".MUL");
+
+    // Y Value
+    if (rpnOpsY.length === 1 && rpnOpsY[0].type === "number") {
+      // Number Y value
+      rpn.int16(rpnOpsY[0].value);
+    } else if (rpnOpsY.length === 1 && rpnOpsY[0].type === "variable") {
+      // Variable Y value
+      rpn.refVariable(rpnOpsY[0].value);
+    } else {
+      // Variable Y value
+      this._performValueRPN(rpn, rpnOpsY, localsLookup);
+    }
+    rpn //
+      .int16((units === "tiles" ? 8 : 1) * 16)
+      .operator(".MUL");
+
+    rpn.stop();
+    this._set(this._localRef(actorRef, 1), ".ARG1");
+    this._set(this._localRef(actorRef, 2), ".ARG0");
+    this._setConst(
+      this._localRef(actorRef, 3),
+      toASMMoveFlags(moveType, useCollisions)
+    );
+    this._stackPop(2);
+    this._addComment(`-- Move Actor`);
+    this.actorSetById(actorId);
     this._actorMoveTo(actorRef);
     this._assertStackNeutral(stackPtr);
     this._addNL();
@@ -3450,8 +3546,38 @@ extern void __mute_mask_${symbol};
           ) {
             e.args[arg] = getArg("actor", argValue); // input[`$variable[${argValue}]$`];
           }
+          // Update script value fields
+          if (isScriptValueField(e.command, arg, e.args, eventLookup)) {
+            if (isScriptValue(argValue)) {
+              e.args[arg] = mapScriptValueLeafNodes(argValue, (val) => {
+                if (val.type === "variable") {
+                  const scriptArg = argLookup["variable"].get(val.value);
+                  if (scriptArg?.indirect) {
+                    return {
+                      type: "indirect",
+                      value: scriptArg.symbol,
+                    };
+                  }
+                } else if (val.type === "property") {
+                  const scriptArg = getArg("actor", val.target);
+                  if (scriptArg && typeof scriptArg === "string") {
+                    return {
+                      ...val,
+                      value: scriptArg,
+                    };
+                  } else if (scriptArg && typeof scriptArg !== "string") {
+                    return {
+                      ...val,
+                      target: scriptArg.symbol,
+                      value: scriptArg,
+                    };
+                  }
+                }
+                return val;
+              });
+            }
+          }
         });
-
         return e;
       }
     );
@@ -3709,14 +3835,11 @@ extern void __mute_mask_${symbol};
     this._addNL();
   };
 
-  variableSetToScriptValue = (variable: string, value: ScriptValue) => {
-    this._addComment("Variable Set To");
-    const [rpnOps, fetchOps] = precompileScriptValue(
-      optimiseScriptValue(value)
-    );
-    const sortedFetchOps = sortFetchOperations(fetchOps);
-
+  _performFetchOperations = (
+    fetchOps: PrecompiledValueFetch[]
+  ): Record<string, string> => {
     const localsLookup: Record<string, string> = {};
+    const sortedFetchOps = sortFetchOperations(fetchOps);
 
     let currentActor = "-1";
     let currentProperty = "";
@@ -3740,8 +3863,8 @@ extern void __mute_mask_${symbol};
           break;
         }
         case "property": {
-          const actorValue = fetchOp.value.target;
-          const propertyValue = fetchOp.value.property;
+          const actorValue = fetchOp.value.target || "player";
+          const propertyValue = fetchOp.value.property || "xpos";
 
           if (
             actorValue === currentActor &&
@@ -3830,6 +3953,11 @@ extern void __mute_mask_${symbol};
           break;
         }
         case "expression": {
+          this._addComment(
+            `-- Evaluate expression ${this._expressionToHumanReadable(
+              fetchOp.value.value
+            )}`
+          );
           this._stackPushEvaluatedExpression(fetchOp.value.value);
           this._set(localVar, ".ARG0");
           this._stackPop(1);
@@ -3841,40 +3969,59 @@ extern void __mute_mask_${symbol};
       }
     }
 
-    console.log({ rpnOps, fetchOps, localsLookup });
+    return localsLookup;
+  };
+
+  _performValueRPN = (
+    rpn: RPNHandler,
+    rpnOps: PrecompiledValueRPNOperation[],
+    localsLookup: Record<string, string>
+  ) => {
+    for (const rpnOp of rpnOps) {
+      switch (rpnOp.type) {
+        case "number": {
+          rpn.int16(rpnOp.value);
+          break;
+        }
+        case "variable": {
+          rpn.refVariable(rpnOp.value);
+          break;
+        }
+        case "local": {
+          this._markLocalUse(localsLookup[rpnOp.value]);
+          rpn.ref(localsLookup[rpnOp.value]);
+          break;
+        }
+        case "indirect": {
+          rpn.refInd(rpnOp.value);
+          break;
+        }
+        default: {
+          const op = valueFunctionToScriptOperator(rpnOp.type);
+          rpn.operator(op);
+        }
+      }
+    }
+  };
+
+  variableSetToScriptValue = (variable: string, value: ScriptValue) => {
+    this._addComment("Variable Set To");
+    const [rpnOps, fetchOps] = precompileScriptValue(
+      optimiseScriptValue(value)
+    );
     if (rpnOps.length === 1 && rpnOps[0].type === "number") {
       this._setVariableConst(variable, rpnOps[0].value);
     } else if (rpnOps.length === 1 && rpnOps[0].type === "variable") {
       this._setVariableToVariable(variable, rpnOps[0].value);
     } else {
+      const localsLookup = this._performFetchOperations(fetchOps);
       this._addComment(`-- Calculate value`);
       const rpn = this._rpn();
-      for (const rpnOp of rpnOps) {
-        switch (rpnOp.type) {
-          case "number": {
-            rpn.int16(rpnOp.value);
-            break;
-          }
-          case "variable": {
-            rpn.refVariable(rpnOp.value);
-            break;
-          }
-          case "local": {
-            this._markLocalUse(localsLookup[rpnOp.value]);
-            rpn.ref(localsLookup[rpnOp.value]);
-            break;
-          }
-          default: {
-            const op = valueFunctionToScriptOperator(rpnOp.type);
-            rpn.operator(op);
-          }
-        }
-      }
+      this._performValueRPN(rpn, rpnOps, localsLookup);
       rpn.stop();
       this._setVariable(variable, ".ARG0");
       this._stackPop(1);
     }
-
     this._addNL();
   };
 

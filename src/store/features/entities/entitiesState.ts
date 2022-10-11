@@ -17,7 +17,11 @@ import {
   DRAG_TRIGGER,
   DRAG_ACTOR,
 } from "../../../consts";
-import { isVariableField, isPropertyField } from "lib/helpers/eventSystem";
+import {
+  isVariableField,
+  isPropertyField,
+  isScriptValueField,
+} from "lib/helpers/eventSystem";
 import clamp from "lib/helpers/clamp";
 import { RootState } from "store/configureStore";
 import settingsActions from "../settings/settingsActions";
@@ -71,6 +75,11 @@ import {
 import spriteActions from "../sprite/spriteActions";
 import { isVariableCustomEvent } from "lib/compiler/scriptBuilder";
 import { sortByKey } from "lib/helpers/sortByKey";
+import {
+  extractScriptValueActorIds,
+  extractScriptValueVariables,
+} from "lib/scriptValue/helpers";
+import { isScriptValue, ScriptValue } from "lib/scriptValue/types";
 
 const MIN_SCENE_X = 60;
 const MIN_SCENE_Y = 30;
@@ -2195,18 +2204,30 @@ const refreshCustomEventArgs: CaseReducer<
           name: oldActors[args.otherActorId]?.name || `Actor ${letter}`,
         };
       }
+      const addVariable = (variable: string) => {
+        const letter = String.fromCharCode(
+          "A".charCodeAt(0) + parseInt(variable[1])
+        );
+        variables[variable] = {
+          id: variable,
+          name: oldVariables[variable]?.name || `Variable ${letter}`,
+          passByReference: oldVariables[variable]?.passByReference ?? true,
+        };
+      };
+      const addPropertyActor = (property: string) => {
+        const actor = property && property.replace(/:.*/, "");
+        if (actor !== "player" && actor !== "$self$") {
+          const letter = String.fromCharCode(
+            "A".charCodeAt(0) + parseInt(actor)
+          );
+          actors[actor] = {
+            id: actor,
+            name: oldActors[actor]?.name || `Actor ${letter}`,
+          };
+        }
+      };
       Object.keys(args).forEach((arg) => {
         if (isVariableField(scriptEvent.command, arg, args, eventLookup)) {
-          const addVariable = (variable: string) => {
-            const letter = String.fromCharCode(
-              "A".charCodeAt(0) + parseInt(variable[1])
-            );
-            variables[variable] = {
-              id: variable,
-              name: oldVariables[variable]?.name || `Variable ${letter}`,
-              passByReference: oldVariables[variable]?.passByReference ?? true,
-            };
-          };
           const variable = args[arg];
           if (
             isUnionVariableValue(variable) &&
@@ -2222,23 +2243,24 @@ const refreshCustomEventArgs: CaseReducer<
           }
         }
         if (isPropertyField(scriptEvent.command, arg, args, eventLookup)) {
-          const addPropertyActor = (property: string) => {
-            const actor = property && property.replace(/:.*/, "");
-            if (actor !== "player" && actor !== "$self$") {
-              const letter = String.fromCharCode(
-                "A".charCodeAt(0) + parseInt(actor)
-              );
-              actors[actor] = {
-                id: actor,
-                name: oldActors[actor]?.name || `Actor ${letter}`,
-              };
-            }
-          };
           const property = args[arg];
           if (isUnionPropertyValue(property) && property.value) {
             addPropertyActor(property.value);
           } else if (typeof property === "string") {
             addPropertyActor(property);
+          }
+        }
+        if (isScriptValueField(scriptEvent.command, arg, args, eventLookup)) {
+          const value = isScriptValue(args[arg])
+            ? (args[arg] as ScriptValue)
+            : undefined;
+          const actors = value ? extractScriptValueActorIds(value) : [];
+          const variables = value ? extractScriptValueVariables(value) : [];
+          for (const actor of actors) {
+            addPropertyActor(actor);
+          }
+          for (const variable of variables) {
+            addVariable(variable);
           }
         }
       });

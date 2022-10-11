@@ -86,8 +86,77 @@ export const optimiseScriptValue = (input: ScriptValue): ScriptValue => {
   return input;
 };
 
+const walkScriptValue = (
+  input: ScriptValue,
+  fn: (val: ScriptValue) => void
+): void => {
+  fn(input);
+  if ("valueA" in input && input.valueA) {
+    walkScriptValue(input.valueA, fn);
+  }
+  if ("valueB" in input && input.valueB) {
+    walkScriptValue(input.valueB, fn);
+  }
+};
+
+export const mapScriptValueLeafNodes = (
+  input: ScriptValue,
+  fn: (val: ScriptValue) => ScriptValue
+): ScriptValue => {
+  if ("valueA" in input && input.type !== "rnd") {
+    const mappedA = input.valueA && mapScriptValueLeafNodes(input.valueA, fn);
+    const mappedB = input.valueB && mapScriptValueLeafNodes(input.valueB, fn);
+    return {
+      ...input,
+      valueA: mappedA,
+      valueB: mappedB,
+    };
+  }
+
+  if (!isValueOperation(input) && input.type !== "rnd") {
+    return fn(input);
+  }
+
+  return input;
+};
+
+export const extractScriptValueActorIds = (input: ScriptValue): string[] => {
+  const actorIds: string[] = [];
+  walkScriptValue(input, (val) => {
+    if (val.type === "property" && !actorIds.includes(val.target)) {
+      actorIds.push(val.target);
+    }
+  });
+  return actorIds;
+};
+
+export const extractScriptValueVariables = (input: ScriptValue): string[] => {
+  const variables: string[] = [];
+  walkScriptValue(input, (val) => {
+    if (val.type === "variable" && !variables.includes(val.value)) {
+      variables.push(val.value);
+    } else if (val.type === "expression") {
+      const text = val.value;
+      if (text && typeof text === "string") {
+        const variablePtrs = text.match(/\$V[0-9]\$/g);
+        if (variablePtrs) {
+          variablePtrs.forEach((variablePtr: string) => {
+            const variable = variablePtr[2];
+            const variableId = `V${variable}`;
+            if (!variables.includes(variableId)) {
+              variables.push(variableId);
+            }
+          });
+        }
+      }
+    }
+  });
+  return variables;
+};
+
 export const precompileScriptValue = (
   input: ScriptValue,
+  localsLabel = "",
   rpnOperations: PrecompiledValueRPNOperation[] = [],
   fetchOperations: PrecompiledValueFetch[] = []
 ): [PrecompiledValueRPNOperation[], PrecompiledValueFetch[]] => {
@@ -96,7 +165,7 @@ export const precompileScriptValue = (
     input.type === "expression" ||
     input.type === "rnd"
   ) {
-    const localName = `local_${fetchOperations.length}`;
+    const localName = `local_${localsLabel}${fetchOperations.length}`;
     rpnOperations.push({
       type: "local",
       value: localName,
@@ -107,10 +176,20 @@ export const precompileScriptValue = (
     });
   } else if (isValueOperation(input)) {
     if (input.valueA) {
-      precompileScriptValue(input.valueA, rpnOperations, fetchOperations);
+      precompileScriptValue(
+        input.valueA,
+        localsLabel,
+        rpnOperations,
+        fetchOperations
+      );
     }
     if (input.valueB) {
-      precompileScriptValue(input.valueB, rpnOperations, fetchOperations);
+      precompileScriptValue(
+        input.valueB,
+        localsLabel,
+        rpnOperations,
+        fetchOperations
+      );
     }
     rpnOperations.push({
       type: input.type,

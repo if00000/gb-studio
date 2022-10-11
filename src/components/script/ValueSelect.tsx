@@ -18,7 +18,6 @@ import {
   BlankIcon,
   CheckIcon,
   CrossIcon,
-  DiceIcon,
   DivideIcon,
   ExpressionIcon,
   MinusIcon,
@@ -62,6 +61,7 @@ const operatorIconLookup: Partial<Record<ValueFunction, JSX.Element>> = {
 const atomIconLookup: Record<ValueAtom, JSX.Element> = {
   number: <NumberIcon />,
   variable: <VariableIcon />,
+  indirect: <VariableIcon />,
   expression: <ExpressionIcon />,
   property: <ActorIcon />,
 };
@@ -463,14 +463,6 @@ const ValueSelect = ({
               });
             }}
             onKeyDown={(e) => {
-              console.log(
-                e.key,
-                e.currentTarget.value,
-                (e.target as any).selectionStart,
-                e.currentTarget.selectionEnd,
-                window.getSelection()?.getRangeAt(0).startOffset,
-                window.getSelection()?.getRangeAt(0)
-              );
               if (e.key === "$") {
                 onChange({
                   type: "variable",
@@ -603,7 +595,6 @@ const ValueSelect = ({
                 property: propertyValue,
               });
             }}
-
             //   units={
             //     (args[field.unitsField || ""] || field.unitsDefault) as UnitType
             //   }

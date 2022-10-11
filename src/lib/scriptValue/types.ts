@@ -70,6 +70,10 @@ export type ScriptValueAtom =
       value: string;
     }
   | {
+      type: "indirect";
+      value: string;
+    }
+  | {
       type: "property";
       target: string;
       property: string;
@@ -113,6 +117,7 @@ export type ValueFunction = typeof valueFunctions[number];
 export const valueAtoms = [
   "number",
   "variable",
+  "indirect",
   "property",
   "expression",
 ] as const;
@@ -216,6 +221,10 @@ export type PrecompiledValueRPNOperation =
     }
   | {
       type: "variable";
+      value: string;
+    }
+  | {
+      type: "indirect";
       value: string;
     }
   | {
