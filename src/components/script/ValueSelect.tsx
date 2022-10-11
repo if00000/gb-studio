@@ -133,11 +133,6 @@ const functionMenuItems: ValueFunctionMenuItem[] = [
   },
 ];
 
-const Wrapper = styled.div`
-  display: flex;
-  //   flex-basis: 300px;
-`;
-
 const OperatorWrapper = styled.div`
   min-width: 24px;
   flex-shrink: 0;
@@ -193,6 +188,16 @@ const BracketsWrapper = styled.div<ValueWrapperProps>`
       : ""}
 `;
 
+const Wrapper = styled.div`
+  display: flex;
+
+  > ${FunctionWrapper}:first-child {
+    margin-top: -3px;
+  }
+  > ${BracketsWrapper}:first-child {
+    margin-top: -3px;
+  }
+`;
 interface ValueSelectProps {
   name: string;
   entityId: string;
