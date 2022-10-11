@@ -3719,7 +3719,9 @@ extern void __mute_mask_${symbol};
     const localsLookup: Record<string, string> = {};
 
     let currentActor = "-1";
+    let currentProperty = "";
     let currentPropData = "";
+    let prevLocalVar = "";
     for (const fetchOp of sortedFetchOps) {
       const localVar = this._declareLocal("local", 1, true);
       localsLookup[fetchOp.local] = localVar;
@@ -3740,7 +3742,17 @@ extern void __mute_mask_${symbol};
         case "property": {
           const actorValue = fetchOp.value.target;
           const propertyValue = fetchOp.value.property;
-          console.log("currentActor", currentActor, actorValue);
+
+          if (
+            actorValue === currentActor &&
+            propertyValue === currentProperty &&
+            prevLocalVar
+          ) {
+            // If requested prop was fetched previously, reuse local var, don't fetch again
+            localsLookup[fetchOp.local] = prevLocalVar;
+            delete this.localsLookup[localVar];
+            continue;
+          }
 
           this._addComment(`-- Fetch ${actorValue} ${propertyValue}`);
           if (currentActor !== actorValue) {
@@ -3813,6 +3825,8 @@ extern void __mute_mask_${symbol};
           } else {
             throw new Error(`Unsupported property type "${propertyValue}"`);
           }
+          currentProperty = propertyValue;
+          prevLocalVar = localVar;
           break;
         }
         case "expression": {
