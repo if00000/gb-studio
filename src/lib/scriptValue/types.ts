@@ -93,7 +93,20 @@ export type ScriptValue =
       };
     };
 
-export const valueFunctions = ["add", "sub", "mul", "div"] as const;
+export const valueFunctions = [
+  "add",
+  "sub",
+  "mul",
+  "div",
+  "min",
+  "max",
+  "eq",
+  "ne",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+] as const;
 export type ValueFunction = typeof valueFunctions[number];
 
 export const valueAtoms = [
@@ -138,10 +151,7 @@ export const isScriptValue = (value: unknown): value is ScriptValue => {
     return true;
   }
   if (
-    (scriptValue.type === "add" ||
-      scriptValue.type === "sub" ||
-      scriptValue.type === "mul" ||
-      scriptValue.type === "div") &&
+    isValueOperation(scriptValue) &&
     (isScriptValue(scriptValue.valueA) || !scriptValue.valueA) &&
     (isScriptValue(scriptValue.valueB) || !scriptValue.valueB)
   ) {
@@ -164,11 +174,7 @@ export const isValueOperation = (
   value?: ScriptValue
 ): value is ScriptValueFunction => {
   return (
-    !!value &&
-    (value.type === "add" ||
-      value.type === "sub" ||
-      value.type === "mul" ||
-      value.type === "div")
+    !!value && valueFunctions.includes(value.type as unknown as ValueFunction)
   );
 };
 

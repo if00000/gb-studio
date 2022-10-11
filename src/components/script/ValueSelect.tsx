@@ -37,23 +37,26 @@ import ScriptEventFormMathArea from "./ScriptEventFormMatharea";
 type ValueFunctionMenuItem = {
   value: ValueFunction;
   label: string;
-  symbol: string;
+  symbol?: string;
 };
 
-const functionSymbolLookup: Record<ValueFunction, string> = {
-  add: "+",
-  sub: "-",
-  mul: "*",
-  div: "/",
-  // rnd: "",
-};
+const TextIcon = styled.div`
+  line-height: 0;
+  font-weight: bold;
+  font-style: italic;
+`;
 
-const functionIconLookup: Record<ValueFunction, JSX.Element> = {
+const operatorIconLookup: Partial<Record<ValueFunction, JSX.Element>> = {
   add: <PlusIcon />,
   sub: <MinusIcon />,
   mul: <CrossIcon />,
   div: <DivideIcon />,
-  // rnd: <DiceIcon />,
+  eq: <TextIcon>==</TextIcon>,
+  ne: <TextIcon>!=</TextIcon>,
+  gt: <TextIcon>&gt;</TextIcon>,
+  gte: <TextIcon>&gt;=</TextIcon>,
+  lt: <TextIcon>&lt;</TextIcon>,
+  lte: <TextIcon>&lt;=</TextIcon>,
 };
 
 const atomIconLookup: Record<ValueAtom, JSX.Element> = {
@@ -63,32 +66,71 @@ const atomIconLookup: Record<ValueAtom, JSX.Element> = {
   property: <ActorIcon />,
 };
 
-const functionMenuItems: ValueFunctionMenuItem[] = [
+const operatorMenuItems: ValueFunctionMenuItem[] = [
   {
     value: "add",
     label: "Add",
-    symbol: functionSymbolLookup["add"],
+    symbol: "+",
   },
   {
     value: "sub",
     label: "Subtract",
-    symbol: functionSymbolLookup["sub"],
+    symbol: "-",
   },
   {
     value: "mul",
     label: "Multiply",
-    symbol: functionSymbolLookup["mul"],
+    symbol: "*",
   },
   {
     value: "div",
     label: "Divide",
-    symbol: functionSymbolLookup["div"],
+    symbol: "/",
   },
-  // {
-  //   value: "rnd",
-  //   label: "Random",
-  //   symbol: functionSymbolLookup["rnd"],
-  // },
+];
+
+const comparisonMenuItems: ValueFunctionMenuItem[] = [
+  {
+    value: "eq",
+    label: "Equal",
+    symbol: "=",
+  },
+  {
+    value: "ne",
+    label: "Not Equal",
+    symbol: "!",
+  },
+  {
+    value: "gt",
+    label: "Greater Than",
+    symbol: ">",
+  },
+  {
+    value: "gte",
+    label: "Greater Than Or Equal To",
+  },
+  {
+    value: "lt",
+    label: "Less Than",
+    symbol: "<",
+  },
+  {
+    value: "lte",
+    label: "Less Than Or Equal To",
+  },
+];
+
+const functionMenuItems: ValueFunctionMenuItem[] = [
+  {
+    value: "min",
+    label: "Min",
+    symbol: "m",
+  },
+  {
+    value: "max",
+    label: "Max",
+    symbol: "M",
+  },
 ];
 
 const Wrapper = styled.div`
@@ -97,8 +139,9 @@ const Wrapper = styled.div`
 `;
 
 const OperatorWrapper = styled.div`
-  width: 24px;
+  min-width: 24px;
   flex-shrink: 0;
+  flex-grow: 0;
 `;
 
 interface ValueWrapperProps {
@@ -252,20 +295,20 @@ const ValueSelect = ({
             <MenuDivider key="divider" />,
           ]
         : []),
-      ...functionMenuItems.map((functionMenuItem) => (
+      ...operatorMenuItems.map((menuItem) => (
         <MenuItem
-          key={functionMenuItem.value}
+          key={menuItem.value}
           onClick={() => {
-            if (isValueOperation(value)) {
+            if (isValueOperation(value) || value.type === "rnd") {
               onChange({
-                type: functionMenuItem.value,
+                type: menuItem.value,
                 valueA: value.valueA,
                 valueB: value.valueB,
               });
               focus();
             } else {
               onChange({
-                type: functionMenuItem.value,
+                type: menuItem.value,
                 valueA: value,
                 valueB: undefined,
               });
@@ -274,16 +317,73 @@ const ValueSelect = ({
           }}
         >
           <MenuItemIcon>
-            {value.type === functionMenuItem.value ? (
-              <CheckIcon />
-            ) : (
-              <BlankIcon />
-            )}
+            {value.type === menuItem.value ? <CheckIcon /> : <BlankIcon />}
           </MenuItemIcon>
-          {functionMenuItem.label}
-          <MenuAccelerator accelerator={functionMenuItem.symbol} />
+          {menuItem.label}
+          {menuItem.symbol && <MenuAccelerator accelerator={menuItem.symbol} />}
         </MenuItem>
       )),
+      <MenuDivider key="div1" />,
+      ...functionMenuItems.map((menuItem) => (
+        <MenuItem
+          key={menuItem.value}
+          onClick={() => {
+            if (isValueOperation(value) || value.type === "rnd") {
+              onChange({
+                type: menuItem.value,
+                valueA: value.valueA,
+                valueB: value.valueB,
+              });
+              focus();
+            } else {
+              onChange({
+                type: menuItem.value,
+                valueA: value,
+                valueB: undefined,
+              });
+              focusSecondChild();
+            }
+          }}
+        >
+          <MenuItemIcon>
+            {value.type === menuItem.value ? <CheckIcon /> : <BlankIcon />}
+          </MenuItemIcon>
+          {menuItem.label}
+          {menuItem.symbol && <MenuAccelerator accelerator={menuItem.symbol} />}
+        </MenuItem>
+      )),
+      <MenuDivider key="div2" />,
+
+      ...comparisonMenuItems.map((menuItem) => (
+        <MenuItem
+          key={menuItem.value}
+          onClick={() => {
+            if (isValueOperation(value) || value.type === "rnd") {
+              onChange({
+                type: menuItem.value,
+                valueA: value.valueA,
+                valueB: value.valueB,
+              });
+              focus();
+            } else {
+              onChange({
+                type: menuItem.value,
+                valueA: value,
+                valueB: undefined,
+              });
+              focusSecondChild();
+            }
+          }}
+        >
+          <MenuItemIcon>
+            {value.type === menuItem.value ? <CheckIcon /> : <BlankIcon />}
+          </MenuItemIcon>
+          {menuItem.label}
+          {menuItem.symbol && <MenuAccelerator accelerator={menuItem.symbol} />}
+        </MenuItem>
+      )),
+      <MenuDivider key="div3" />,
+
       <MenuItem
         key="rnd"
         onClick={() => {
@@ -317,6 +417,7 @@ const ValueSelect = ({
           {value.type === "rnd" ? <CheckIcon /> : <BlankIcon />}
         </MenuItemIcon>
         Random
+        <MenuAccelerator accelerator="r" />
       </MenuItem>,
     ],
     [focus, focusSecondChild, isValueFn, onChange, value]
@@ -325,7 +426,9 @@ const ValueSelect = ({
   const dropdownButton = useMemo(() => {
     if (fixedType) {
       return isValueAtom(value) ? (
-        <Button size="small">{atomIconLookup[value.type]}</Button>
+        <Button size="small" disabled>
+          {atomIconLookup[value.type]}
+        </Button>
       ) : null;
     }
     return isValueAtom(value) ? (
@@ -409,6 +512,55 @@ const ValueSelect = ({
                   valueB: undefined,
                 });
                 focusSecondChild();
+              } else if (e.key === "r") {
+                onChange({
+                  type: "rnd",
+                  valueA: value,
+                  valueB: undefined,
+                });
+                focusSecondChild();
+              } else if (e.key === "m") {
+                onChange({
+                  type: "min",
+                  valueA: value,
+                  valueB: undefined,
+                });
+                focusSecondChild();
+              } else if (e.key === "M") {
+                onChange({
+                  type: "max",
+                  valueA: value,
+                  valueB: undefined,
+                });
+                focusSecondChild();
+              } else if (e.key === "=") {
+                onChange({
+                  type: "eq",
+                  valueA: value,
+                  valueB: undefined,
+                });
+                focusSecondChild();
+              } else if (e.key === "!") {
+                onChange({
+                  type: "ne",
+                  valueA: value,
+                  valueB: undefined,
+                });
+                focusSecondChild();
+              } else if (e.key === ">") {
+                onChange({
+                  type: "gt",
+                  valueA: value,
+                  valueB: undefined,
+                });
+                focusSecondChild();
+              } else if (e.key === "<") {
+                onChange({
+                  type: "lt",
+                  valueA: value,
+                  valueB: undefined,
+                });
+                focusSecondChild();
               }
             }}
             // units={(args[field.unitsField || ""] || field.unitsDefault) as UnitType}
@@ -418,8 +570,7 @@ const ValueSelect = ({
         </InputGroup>
       </ValueWrapper>
     );
-  }
-  if (value.type === "variable") {
+  } else if (value.type === "variable") {
     input = (
       <ValueWrapper>
         <InputGroup>
@@ -439,8 +590,7 @@ const ValueSelect = ({
         </InputGroup>
       </ValueWrapper>
     );
-  }
-  if (value.type === "property") {
+  } else if (value.type === "property") {
     input = (
       <ValueWrapper>
         <InputGroup>
@@ -464,8 +614,7 @@ const ValueSelect = ({
         </InputGroup>
       </ValueWrapper>
     );
-  }
-  if (value.type === "expression") {
+  } else if (value.type === "expression") {
     input = (
       <ValueWrapper>
         <InputGroup>
@@ -485,8 +634,7 @@ const ValueSelect = ({
         </InputGroup>
       </ValueWrapper>
     );
-  }
-  if (value.type === "rnd") {
+  } else if (value.type === "rnd") {
     input = (
       <FunctionWrapper
         hover={isHovered}
@@ -504,7 +652,8 @@ const ValueSelect = ({
         <OperatorWrapper>
           <DropdownButton
             id={name}
-            label={<DiceIcon />}
+            // label={<DiceIcon />}
+            label={<TextIcon>rnd</TextIcon>}
             showArrow={false}
             variant="transparent"
             size="small"
@@ -552,7 +701,7 @@ const ValueSelect = ({
             innerValue
             fixedType
           />
-
+          ,
           <ValueSelect
             name={`${name}_valueB`}
             entityId={entityId}
@@ -571,8 +720,165 @@ const ValueSelect = ({
         </BracketsWrapper>
       </FunctionWrapper>
     );
-  }
-  if (isValueOperation(value)) {
+  } else if (value.type === "min") {
+    input = (
+      <FunctionWrapper
+        hover={isHovered}
+        onMouseOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsHovered(true);
+        }}
+        onMouseOut={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsHovered(false);
+        }}
+      >
+        <OperatorWrapper>
+          <DropdownButton
+            id={name}
+            label={<TextIcon>min</TextIcon>}
+            showArrow={false}
+            variant="transparent"
+            size="small"
+          >
+            {menu}
+            <MenuDivider />
+            <MenuItem
+              onClick={() => {
+                onChange(value.valueA);
+                focus();
+              }}
+            >
+              <MenuItemIcon>
+                <BlankIcon />
+              </MenuItemIcon>
+              Remove
+            </MenuItem>
+          </DropdownButton>
+        </OperatorWrapper>
+        <BracketsWrapper
+          hover={isHovered}
+          onMouseOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsHovered(true);
+          }}
+          onMouseOut={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsHovered(false);
+          }}
+        >
+          <ValueSelect
+            name={`${name}_valueA`}
+            entityId={entityId}
+            value={value.valueA}
+            onChange={(newValue) => {
+              onChange({
+                ...value,
+                valueA: newValue,
+              });
+            }}
+            innerValue
+          />
+          ,
+          <ValueSelect
+            name={`${name}_valueB`}
+            entityId={entityId}
+            value={value.valueB}
+            onChange={(newValue) => {
+              onChange({
+                ...value,
+                valueB: newValue,
+              });
+            }}
+            innerValue
+          />
+        </BracketsWrapper>
+      </FunctionWrapper>
+    );
+  } else if (value.type === "max") {
+    input = (
+      <FunctionWrapper
+        hover={isHovered}
+        onMouseOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsHovered(true);
+        }}
+        onMouseOut={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsHovered(false);
+        }}
+      >
+        <OperatorWrapper>
+          <DropdownButton
+            id={name}
+            label={<TextIcon>max</TextIcon>}
+            showArrow={false}
+            variant="transparent"
+            size="small"
+          >
+            {menu}
+            <MenuDivider />
+            <MenuItem
+              onClick={() => {
+                onChange(value.valueA);
+                focus();
+              }}
+            >
+              <MenuItemIcon>
+                <BlankIcon />
+              </MenuItemIcon>
+              Remove
+            </MenuItem>
+          </DropdownButton>
+        </OperatorWrapper>
+        <BracketsWrapper
+          hover={isHovered}
+          onMouseOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsHovered(true);
+          }}
+          onMouseOut={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsHovered(false);
+          }}
+        >
+          <ValueSelect
+            name={`${name}_valueA`}
+            entityId={entityId}
+            value={value.valueA}
+            onChange={(newValue) => {
+              onChange({
+                ...value,
+                valueA: newValue,
+              });
+            }}
+            innerValue
+          />
+          ,
+          <ValueSelect
+            name={`${name}_valueB`}
+            entityId={entityId}
+            value={value.valueB}
+            onChange={(newValue) => {
+              onChange({
+                ...value,
+                valueB: newValue,
+              });
+            }}
+            innerValue
+          />
+        </BracketsWrapper>
+      </FunctionWrapper>
+    );
+  } else if (isValueOperation(value)) {
     input = (
       <BracketsWrapper
         hover={isHovered}
@@ -602,7 +908,7 @@ const ValueSelect = ({
         <OperatorWrapper>
           <DropdownButton
             id={name}
-            label={functionIconLookup[value.type]}
+            label={operatorIconLookup[value.type]}
             showArrow={false}
             variant="transparent"
             size="small"
