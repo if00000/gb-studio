@@ -1,7 +1,15 @@
 import { PropertySelect } from "components/forms/PropertySelect";
 import { VariableSelect } from "components/forms/VariableSelect";
+import {
+  isValueAtom,
+  isValueOperation,
+  ScriptValue,
+  ValueAtom,
+  ValueFunction,
+} from "lib/scriptValue/types";
 import React, { useCallback, useMemo, useState } from "react";
 import styled, { css } from "styled-components";
+import { Button } from "ui/buttons/Button";
 import { DropdownButton } from "ui/buttons/DropdownButton";
 import { InputGroup, InputGroupPrepend } from "ui/form/InputGroup";
 import { NumberInput } from "ui/form/NumberInput";
@@ -26,82 +34,6 @@ import {
 } from "ui/menu/Menu";
 import ScriptEventFormMathArea from "./ScriptEventFormMatharea";
 
-type ScriptValue =
-  | {
-      type: "number";
-      value: number;
-    }
-  | {
-      type: "variable";
-      value: string;
-    }
-  | {
-      type: "property";
-      value: string;
-    }
-  | {
-      type: "expression";
-      value: string;
-    }
-  | {
-      type: "add";
-      valueA?: ScriptValue;
-      valueB?: ScriptValue;
-    }
-  | {
-      type: "sub";
-      valueA?: ScriptValue;
-      valueB?: ScriptValue;
-    }
-  | {
-      type: "mul";
-      valueA?: ScriptValue;
-      valueB?: ScriptValue;
-    }
-  | {
-      type: "div";
-      valueA?: ScriptValue;
-      valueB?: ScriptValue;
-    }
-  | {
-      type: "eq";
-      valueA?: ScriptValue;
-      valueB?: ScriptValue;
-    }
-  | {
-      type: "ne";
-      valueA?: ScriptValue;
-      valueB?: ScriptValue;
-    }
-  | {
-      type: "gt";
-      valueA?: ScriptValue;
-      valueB?: ScriptValue;
-    }
-  | {
-      type: "gte";
-      valueA?: ScriptValue;
-      valueB?: ScriptValue;
-    }
-  | {
-      type: "lt";
-      valueA?: ScriptValue;
-      valueB?: ScriptValue;
-    }
-  | {
-      type: "lte";
-      valueA?: ScriptValue;
-      valueB?: ScriptValue;
-    }
-  | {
-      type: "rnd";
-      valueA?: ScriptValue;
-      valueB?: ScriptValue;
-    };
-
-type ValueFunction = "add" | "sub" | "mul" | "div" | "rnd";
-type ValueAtom = "number" | "variable" | "property" | "expression";
-
 type ValueFunctionMenuItem = {
   value: ValueFunction;
   label: string;
@@ -113,7 +45,7 @@ const functionSymbolLookup: Record<ValueFunction, string> = {
   sub: "-",
   mul: "*",
   div: "/",
-  rnd: "",
+  // rnd: "",
 };
 
 const functionIconLookup: Record<ValueFunction, JSX.Element> = {
@@ -121,7 +53,7 @@ const functionIconLookup: Record<ValueFunction, JSX.Element> = {
   sub: <MinusIcon />,
   mul: <CrossIcon />,
   div: <DivideIcon />,
-  rnd: <DiceIcon />,
+  // rnd: <DiceIcon />,
 };
 
 const atomIconLookup: Record<ValueAtom, JSX.Element> = {
@@ -152,11 +84,11 @@ const functionMenuItems: ValueFunctionMenuItem[] = [
     label: "Divide",
     symbol: functionSymbolLookup["div"],
   },
-  {
-    value: "rnd",
-    label: "Random",
-    symbol: functionSymbolLookup["rnd"],
-  },
+  // {
+  //   value: "rnd",
+  //   label: "Random",
+  //   symbol: functionSymbolLookup["rnd"],
+  // },
 ];
 
 const Wrapper = styled.div`
@@ -218,75 +150,14 @@ const BracketsWrapper = styled.div<ValueWrapperProps>`
       : ""}
 `;
 
-export const isScriptValue = (value: unknown): value is ScriptValue => {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-  const scriptValue = value as ScriptValue;
-  // Is a number
-  if (scriptValue.type === "number" && typeof scriptValue.value === "number") {
-    return true;
-  }
-  if (
-    scriptValue.type === "variable" &&
-    typeof scriptValue.value === "string"
-  ) {
-    return true;
-  }
-  if (
-    scriptValue.type === "property" &&
-    typeof scriptValue.value === "string"
-  ) {
-    return true;
-  }
-  if (
-    scriptValue.type === "expression" &&
-    typeof scriptValue.value === "string"
-  ) {
-    return true;
-  }
-  if (
-    (scriptValue.type === "add" ||
-      scriptValue.type === "sub" ||
-      scriptValue.type === "mul" ||
-      scriptValue.type === "div") &&
-    (isScriptValue(scriptValue.valueA) || !scriptValue.valueA) &&
-    (isScriptValue(scriptValue.valueB) || !scriptValue.valueB)
-  ) {
-    return true;
-  }
-  if (
-    scriptValue.type === "rnd" &&
-    (isScriptValue(scriptValue.valueA) || !scriptValue.valueA) &&
-    (isScriptValue(scriptValue.valueB) || !scriptValue.valueB)
-  ) {
-    return true;
-  }
-
-  return false;
-};
-
 interface ValueSelectProps {
   name: string;
   entityId: string;
   value?: ScriptValue;
   onChange: (newValue: ScriptValue | undefined) => void;
   innerValue?: boolean;
+  fixedType?: boolean;
 }
-
-type ScriptValueFunction = ScriptValue & { type: ValueFunction };
-
-const isValueOperation = (
-  value?: ScriptValue
-): value is ScriptValueFunction => {
-  return (
-    !!value &&
-    (value.type === "add" ||
-      value.type === "sub" ||
-      value.type === "mul" ||
-      value.type === "div")
-  );
-};
 
 const ValueSelect = ({
   name,
@@ -294,6 +165,7 @@ const ValueSelect = ({
   value = { type: "number", value: 0 },
   onChange,
   innerValue,
+  fixedType,
 }: ValueSelectProps) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -310,6 +182,11 @@ const ValueSelect = ({
       document.getElementById(`${name}_valueB`)?.focus();
     }, 150);
   }, [name]);
+
+  console.log(value.type);
+  if (isValueFn) {
+    console.log(value.type);
+  }
 
   const menu = useMemo(
     () => [
@@ -407,24 +284,67 @@ const ValueSelect = ({
           <MenuAccelerator accelerator={functionMenuItem.symbol} />
         </MenuItem>
       )),
+      <MenuItem
+        key="rnd"
+        onClick={() => {
+          const valueA =
+            "valueA" in value && value.valueA && value.valueA.type === "number"
+              ? value.valueA
+              : {
+                  type: "number" as const,
+                  value: 0,
+                };
+          const valueB =
+            "valueB" in value && value.valueB && value.valueB.type === "number"
+              ? value.valueB
+              : {
+                  type: "number" as const,
+                  value: 0,
+                };
+          onChange({
+            type: "rnd",
+            valueA: valueA,
+            valueB: valueB,
+          });
+          if (valueA.value) {
+            focusSecondChild();
+          } else {
+            focus();
+          }
+        }}
+      >
+        <MenuItemIcon>
+          {value.type === "rnd" ? <CheckIcon /> : <BlankIcon />}
+        </MenuItemIcon>
+        Random
+      </MenuItem>,
     ],
     [focus, focusSecondChild, isValueFn, onChange, value]
   );
+
+  const dropdownButton = useMemo(() => {
+    if (fixedType) {
+      return isValueAtom(value) ? (
+        <Button size="small">{atomIconLookup[value.type]}</Button>
+      ) : null;
+    }
+    return isValueAtom(value) ? (
+      <DropdownButton
+        label={atomIconLookup[value.type]}
+        size="small"
+        showArrow={false}
+      >
+        {menu}
+      </DropdownButton>
+    ) : null;
+  }, [fixedType, menu, value]);
 
   let input: JSX.Element | null = null;
   if (value.type === "number") {
     input = (
       <ValueWrapper>
         <InputGroup>
-          <InputGroupPrepend>
-            <DropdownButton
-              label={atomIconLookup[value.type]}
-              size="small"
-              showArrow={false}
-            >
-              {menu}
-            </DropdownButton>
-          </InputGroupPrepend>
+          <InputGroupPrepend>{dropdownButton}</InputGroupPrepend>
           <NumberInput
             id={name}
             type="number"
@@ -503,15 +423,7 @@ const ValueSelect = ({
     input = (
       <ValueWrapper>
         <InputGroup>
-          <InputGroupPrepend>
-            <DropdownButton
-              label={atomIconLookup[value.type]}
-              size="small"
-              showArrow={false}
-            >
-              {menu}
-            </DropdownButton>
-          </InputGroupPrepend>
+          <InputGroupPrepend>{dropdownButton}</InputGroupPrepend>
           <VariableSelect
             // id={name}
             name={name}
@@ -532,15 +444,7 @@ const ValueSelect = ({
     input = (
       <ValueWrapper>
         <InputGroup>
-          <InputGroupPrepend>
-            <DropdownButton
-              label={atomIconLookup[value.type]}
-              size="small"
-              showArrow={false}
-            >
-              {menu}
-            </DropdownButton>
-          </InputGroupPrepend>
+          <InputGroupPrepend>{dropdownButton}</InputGroupPrepend>
           <PropertySelect
             name={name}
             value={value.value}
@@ -565,15 +469,7 @@ const ValueSelect = ({
     input = (
       <ValueWrapper>
         <InputGroup>
-          <InputGroupPrepend>
-            <DropdownButton
-              label={atomIconLookup[value.type]}
-              size="small"
-              showArrow={false}
-            >
-              {menu}
-            </DropdownButton>
-          </InputGroupPrepend>
+          <InputGroupPrepend>{dropdownButton}</InputGroupPrepend>
           <ScriptEventFormMathArea
             id={name}
             value={value.value}
@@ -608,7 +504,7 @@ const ValueSelect = ({
         <OperatorWrapper>
           <DropdownButton
             id={name}
-            label={functionIconLookup[value.type]}
+            label={<DiceIcon />}
             showArrow={false}
             variant="transparent"
             size="small"
@@ -646,12 +542,15 @@ const ValueSelect = ({
             entityId={entityId}
             value={value.valueA}
             onChange={(newValue) => {
-              onChange({
-                ...value,
-                valueA: newValue,
-              });
+              if (!newValue || newValue.type === "number") {
+                onChange({
+                  ...value,
+                  valueA: newValue,
+                });
+              }
             }}
             innerValue
+            fixedType
           />
 
           <ValueSelect
@@ -659,12 +558,15 @@ const ValueSelect = ({
             entityId={entityId}
             value={value.valueB}
             onChange={(newValue) => {
-              onChange({
-                ...value,
-                valueB: newValue,
-              });
+              if (!newValue || newValue.type === "number") {
+                onChange({
+                  ...value,
+                  valueB: newValue,
+                });
+              }
             }}
             innerValue
+            fixedType
           />
         </BracketsWrapper>
       </FunctionWrapper>

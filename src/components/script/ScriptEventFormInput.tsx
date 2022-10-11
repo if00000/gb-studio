@@ -56,7 +56,8 @@ import {
 } from "./ScriptEditorContext";
 import ScriptEventFormMathArea from "./ScriptEventFormMatharea";
 import ScriptEventFormTextArea from "./ScriptEventFormTextarea";
-import ValueSelect, { isScriptValue } from "./ValueSelect";
+import ValueSelect from "./ValueSelect";
+import { isScriptValue } from "lib/scriptValue/types";
 
 interface ScriptEventFormInputProps {
   id: string;

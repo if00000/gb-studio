@@ -1,20 +1,4 @@
-export type ScriptValue =
-  | {
-      type: "number";
-      value: number;
-    }
-  | {
-      type: "variable";
-      value: string;
-    }
-  | {
-      type: "property";
-      value: string;
-    }
-  | {
-      type: "expression";
-      value: string;
-    }
+export type RPNOperation =
   | {
       type: "add";
       valueA?: ScriptValue;
@@ -66,13 +50,59 @@ export type ScriptValue =
       valueB?: ScriptValue;
     }
   | {
-      type: "rnd";
+      type: "min";
+      valueA?: ScriptValue;
+      valueB?: ScriptValue;
+    }
+  | {
+      type: "max";
       valueA?: ScriptValue;
       valueB?: ScriptValue;
     };
 
-export type ValueFunction = "add" | "sub" | "mul" | "div" | "rnd";
-export type ValueAtom = "number" | "variable" | "property" | "expression";
+export type ScriptValueAtom =
+  | {
+      type: "number";
+      value: number;
+    }
+  | {
+      type: "variable";
+      value: string;
+    }
+  | {
+      type: "property";
+      value: string;
+    }
+  | {
+      type: "expression";
+      value: string;
+    };
+
+export type ScriptValue =
+  | RPNOperation
+  | ScriptValueAtom
+  | {
+      type: "rnd";
+      valueA?: {
+        type: "number";
+        value: number;
+      };
+      valueB?: {
+        type: "number";
+        value: number;
+      };
+    };
+
+export const valueFunctions = ["add", "sub", "mul", "div"] as const;
+export type ValueFunction = typeof valueFunctions[number];
+
+export const valueAtoms = [
+  "number",
+  "variable",
+  "property",
+  "expression",
+] as const;
+export type ValueAtom = typeof valueAtoms[number];
 
 export type ValueFunctionMenuItem = {
   value: ValueFunction;
@@ -126,4 +156,22 @@ export const isScriptValue = (value: unknown): value is ScriptValue => {
   }
 
   return false;
+};
+
+export type ScriptValueFunction = ScriptValue & { type: ValueFunction };
+
+export const isValueOperation = (
+  value?: ScriptValue
+): value is ScriptValueFunction => {
+  return (
+    !!value &&
+    (value.type === "add" ||
+      value.type === "sub" ||
+      value.type === "mul" ||
+      value.type === "div")
+  );
+};
+
+export const isValueAtom = (value?: ScriptValue): value is ScriptValueAtom => {
+  return !!value && valueAtoms.includes(value.type as unknown as ValueAtom);
 };
