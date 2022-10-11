@@ -71,7 +71,8 @@ export type ScriptValueAtom =
     }
   | {
       type: "property";
-      value: string;
+      target: string;
+      property: string;
     }
   | {
       type: "expression";
@@ -140,7 +141,8 @@ export const isScriptValue = (value: unknown): value is ScriptValue => {
   }
   if (
     scriptValue.type === "property" &&
-    typeof scriptValue.value === "string"
+    typeof scriptValue.target === "string" &&
+    typeof scriptValue.property === "string"
   ) {
     return true;
   }
@@ -181,3 +183,78 @@ export const isValueOperation = (
 export const isValueAtom = (value?: ScriptValue): value is ScriptValueAtom => {
   return !!value && valueAtoms.includes(value.type as unknown as ValueAtom);
 };
+
+export type PrecompiledValueFetch = {
+  local: string;
+  value:
+    | {
+        type: "property";
+        target: string;
+        property: string;
+      }
+    | {
+        type: "expression";
+        value: string;
+      }
+    | {
+        type: "rnd";
+        valueA?: {
+          type: "number";
+          value: number;
+        };
+        valueB?: {
+          type: "number";
+          value: number;
+        };
+      };
+};
+
+export type PrecompiledValueRPNOperation =
+  | {
+      type: "number";
+      value: number;
+    }
+  | {
+      type: "variable";
+      value: string;
+    }
+  | {
+      type: "local";
+      value: string;
+    }
+  | {
+      type: "add";
+    }
+  | {
+      type: "sub";
+    }
+  | {
+      type: "mul";
+    }
+  | {
+      type: "div";
+    }
+  | {
+      type: "eq";
+    }
+  | {
+      type: "ne";
+    }
+  | {
+      type: "gt";
+    }
+  | {
+      type: "gte";
+    }
+  | {
+      type: "lt";
+    }
+  | {
+      type: "lte";
+    }
+  | {
+      type: "min";
+    }
+  | {
+      type: "max";
+    };

@@ -427,7 +427,6 @@ test("should perform constant folding for nested input", () => {
   });
 });
 
-/*
 test("should precompile to list of required operations", () => {
   const input: ScriptValue = {
     type: "add",
@@ -440,7 +439,22 @@ test("should precompile to list of required operations", () => {
       value: "L0",
     },
   };
-  expect(precompileScriptValue(input)).toEqual([input]);
+  expect(precompileScriptValue(input)).toEqual([
+    [
+      {
+        type: "variable",
+        value: "L0",
+      },
+      {
+        type: "variable",
+        value: "L0",
+      },
+      {
+        type: "add",
+      },
+    ],
+    [],
+  ]);
 });
 
 test("should precompile to list of required operations", () => {
@@ -452,29 +466,33 @@ test("should precompile to list of required operations", () => {
     },
     valueB: {
       type: "property",
-      value: "player:xpos",
+      target: "player",
+      property: "xpos",
     },
   };
   expect(precompileScriptValue(input)).toEqual([
-    {
-      type: "set",
-      symbol: "temp0",
-      value: {
-        type: "property",
-        value: "player:xpos",
-      },
-    },
-    {
-      type: "add",
-      valueA: {
+    [
+      {
         type: "variable",
         value: "L0",
       },
-      valueB: {
-        type: "temp",
-        value: "temp0",
+      {
+        type: "local",
+        value: "local_0",
       },
-    },
+      {
+        type: "add",
+      },
+    ],
+    [
+      {
+        local: "local_0",
+        value: {
+          type: "property",
+          target: "player",
+          property: "xpos",
+        },
+      },
+    ],
   ]);
 });
-*/

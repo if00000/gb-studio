@@ -52,6 +52,12 @@ import {
   defaultVariableForContext,
   ScriptEditorContextType,
 } from "components/script/ScriptEditorContext";
+import { ScriptValue, ValueFunction } from "lib/scriptValue/types";
+import {
+  optimiseScriptValue,
+  precompileScriptValue,
+  sortFetchOperations,
+} from "lib/scriptValue/helpers";
 
 type ScriptOutput = string[];
 
@@ -406,6 +412,38 @@ const toScriptOperator = (
       return ".AND";
     case "||":
       return ".OR";
+  }
+  assertUnreachable(operator);
+};
+
+const valueFunctionToScriptOperator = (
+  operator: ValueFunction
+): ScriptBuilderRPNOperation => {
+  switch (operator) {
+    case "add":
+      return ".ADD";
+    case "sub":
+      return ".SUB";
+    case "div":
+      return ".DIV";
+    case "mul":
+      return ".MUL";
+    case "eq":
+      return ".EQ";
+    case "ne":
+      return ".NE";
+    case "lt":
+      return ".LT";
+    case "lte":
+      return ".LTE";
+    case "gt":
+      return ".GT";
+    case "gte":
+      return ".GTE";
+    case "min":
+      return ".MIN";
+    case "max":
+      return ".MAX";
   }
   assertUnreachable(operator);
 };
@@ -3114,7 +3152,12 @@ extern void __mute_mask_${symbol};
   // --------------------------------------------------------------------------
   // Timer
 
-  timerScriptSet = (frames = 600, script: ScriptEvent[], symbol?: string, timer = 1) => {
+  timerScriptSet = (
+    frames = 600,
+    script: ScriptEvent[],
+    symbol?: string,
+    timer = 1
+  ) => {
     this._addComment(`Timer Start`);
     const scriptRef = this._compileSubScript("timer", script, symbol);
     const TIMER_CYCLES = 16;
@@ -3663,6 +3706,161 @@ extern void __mute_mask_${symbol};
   variableSetToValue = (variable: string, value: number | string) => {
     this._addComment("Variable Set To Value");
     this._setVariableConst(variable, value);
+    this._addNL();
+  };
+
+  variableSetToScriptValue = (variable: string, value: ScriptValue) => {
+    this._addComment("Variable Set To");
+    const [rpnOps, fetchOps] = precompileScriptValue(
+      optimiseScriptValue(value)
+    );
+    const sortedFetchOps = sortFetchOperations(fetchOps);
+
+    const localsLookup: Record<string, string> = {};
+
+    let currentActor = "-1";
+    let currentPropData = "";
+    for (const fetchOp of sortedFetchOps) {
+      const localVar = this._declareLocal("local", 1, true);
+      localsLookup[fetchOp.local] = localVar;
+      switch (fetchOp.value.type) {
+        case "rnd": {
+          const min = Math.min(
+            fetchOp.value.valueA?.value ?? 0,
+            fetchOp.value.valueB?.value ?? 0
+          );
+          const max = Math.max(
+            fetchOp.value.valueA?.value ?? 0,
+            fetchOp.value.valueB?.value ?? 0
+          );
+          this._addComment(`-- Rand between ${min} and ${max} (inclusive)`);
+          this._rand(localVar, min, max - min + 1);
+          break;
+        }
+        case "property": {
+          const actorValue = fetchOp.value.target;
+          const propertyValue = fetchOp.value.property;
+          console.log("currentActor", currentActor, actorValue);
+
+          this._addComment(`-- Fetch ${actorValue} ${propertyValue}`);
+          if (currentActor !== actorValue) {
+            this.actorSetById(actorValue);
+            currentActor = actorValue;
+            currentPropData = "";
+          }
+          if (propertyValue === "xpos") {
+            const actorRef = this._declareLocal("actor", 4);
+            if (currentPropData !== "pos") {
+              this._actorGetPosition(actorRef);
+              currentPropData = "pos";
+            }
+            this._rpn() //
+              .ref(this._localRef(actorRef, 1))
+              .int16(8 * 16)
+              .operator(".DIV")
+              .stop();
+            this._set(localVar, ".ARG0");
+            this._stackPop(1);
+          } else if (propertyValue === "ypos") {
+            const actorRef = this._declareLocal("actor", 4);
+            if (currentPropData !== "pos") {
+              this._actorGetPosition(actorRef);
+              currentPropData = "pos";
+            }
+            this._rpn() //
+              .ref(this._localRef(actorRef, 2))
+              .int16(8 * 16)
+              .operator(".DIV")
+              .stop();
+            this._set(localVar, ".ARG0");
+            this._stackPop(1);
+          } else if (propertyValue === "pxpos") {
+            const actorRef = this._declareLocal("actor", 4);
+            if (currentPropData !== "pos") {
+              this._actorGetPosition(actorRef);
+              currentPropData = "pos";
+            }
+            this._rpn() //
+              .ref(this._localRef(actorRef, 1))
+              .int16(16)
+              .operator(".DIV")
+              .stop();
+            this._set(localVar, ".ARG0");
+            this._stackPop(1);
+          } else if (propertyValue === "pypos") {
+            const actorRef = this._declareLocal("actor", 4);
+            if (currentPropData !== "pos") {
+              this._actorGetPosition(actorRef);
+              currentPropData = "pos";
+            }
+            this._rpn() //
+              .ref(this._localRef(actorRef, 2))
+              .int16(16)
+              .operator(".DIV")
+              .stop();
+            this._set(localVar, ".ARG0");
+            this._stackPop(1);
+          } else if (propertyValue === "direction") {
+            const actorRef = this._declareLocal("actor", 4);
+            this._actorGetDirection(actorRef, localVar);
+          } else if (propertyValue === "frame") {
+            const actorRef = this._declareLocal("actor", 4);
+            if (currentPropData !== "frame") {
+              this._actorGetAnimFrame(actorRef);
+              currentPropData = "frame";
+            }
+            this._set(localVar, this._localRef(actorRef, 1));
+          } else {
+            throw new Error(`Unsupported property type "${propertyValue}"`);
+          }
+          break;
+        }
+        case "expression": {
+          this._stackPushEvaluatedExpression(fetchOp.value.value);
+          this._set(localVar, ".ARG0");
+          this._stackPop(1);
+          break;
+        }
+        default: {
+          assertUnreachable(fetchOp.value);
+        }
+      }
+    }
+
+    console.log({ rpnOps, fetchOps, localsLookup });
+    if (rpnOps.length === 1 && rpnOps[0].type === "number") {
+      this._setVariableConst(variable, rpnOps[0].value);
+    } else if (rpnOps.length === 1 && rpnOps[0].type === "variable") {
+      this._setVariableToVariable(variable, rpnOps[0].value);
+    } else {
+      this._addComment(`-- Calculate value`);
+      const rpn = this._rpn();
+      for (const rpnOp of rpnOps) {
+        switch (rpnOp.type) {
+          case "number": {
+            rpn.int16(rpnOp.value);
+            break;
+          }
+          case "variable": {
+            rpn.refVariable(rpnOp.value);
+            break;
+          }
+          case "local": {
+            this._markLocalUse(localsLookup[rpnOp.value]);
+            rpn.ref(localsLookup[rpnOp.value]);
+            break;
+          }
+          default: {
+            const op = valueFunctionToScriptOperator(rpnOp.type);
+            rpn.operator(op);
+          }
+        }
+      }
+      rpn.stop();
+      this._setVariable(variable, ".ARG0");
+      this._stackPop(1);
+    }
+
     this._addNL();
   };
 

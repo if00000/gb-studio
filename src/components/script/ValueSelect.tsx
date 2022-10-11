@@ -226,11 +226,6 @@ const ValueSelect = ({
     }, 150);
   }, [name]);
 
-  console.log(value.type);
-  if (isValueFn) {
-    console.log(value.type);
-  }
-
   const menu = useMemo(
     () => [
       ...(!isValueFn
@@ -269,7 +264,8 @@ const ValueSelect = ({
               onClick={() => {
                 onChange({
                   type: "property",
-                  value: "",
+                  target: "",
+                  property: "",
                 });
               }}
             >
@@ -597,11 +593,14 @@ const ValueSelect = ({
           <InputGroupPrepend>{dropdownButton}</InputGroupPrepend>
           <PropertySelect
             name={name}
-            value={value.value}
+            value={`${value.target}:${value.property}`}
             onChange={(newValue) => {
+              const targetValue = newValue.replace(/:.*/, "");
+              const propertyValue = newValue.replace(/.*:/, "");
               onChange({
                 type: "property",
-                value: newValue,
+                target: targetValue,
+                property: propertyValue,
               });
             }}
 
