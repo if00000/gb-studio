@@ -80,6 +80,21 @@ export const InputGroup = styled.div`
       }
     }
   }
+
+  .DirectionPicker {
+    &:not(:first-child) {
+      .DirectionPicker__Button--Left {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+    }
+    &:not(:last-child) {
+      .DirectionPicker__Button--Right {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+    }
+  }
 `;
 
 export const InputGroupPrepend = styled.div`

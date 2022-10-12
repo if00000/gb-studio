@@ -355,6 +355,11 @@ const ScriptEventFormInput = ({
         entityId={entityId}
         value={isScriptValue(value) ? value : undefined}
         onChange={onChangeField}
+        includeDirection={
+          isScriptValue(defaultValue)
+            ? defaultValue.type === "direction"
+            : false
+        }
       />
     );
   } else if (type === "palette") {

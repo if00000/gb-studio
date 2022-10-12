@@ -1,3 +1,4 @@
+import DirectionPicker from "components/forms/DirectionPicker";
 import { PropertySelect } from "components/forms/PropertySelect";
 import { VariableSelect } from "components/forms/VariableSelect";
 import {
@@ -17,6 +18,7 @@ import {
   ActorIcon,
   BlankIcon,
   CheckIcon,
+  CompassIcon,
   CrossIcon,
   DivideIcon,
   ExpressionIcon,
@@ -60,6 +62,7 @@ const operatorIconLookup: Partial<Record<ValueFunction, JSX.Element>> = {
 
 const atomIconLookup: Record<ValueAtom, JSX.Element> = {
   number: <NumberIcon />,
+  direction: <CompassIcon />,
   variable: <VariableIcon />,
   indirect: <VariableIcon />,
   expression: <ExpressionIcon />,
@@ -205,6 +208,7 @@ interface ValueSelectProps {
   onChange: (newValue: ScriptValue | undefined) => void;
   innerValue?: boolean;
   fixedType?: boolean;
+  includeDirection?: boolean;
 }
 
 const ValueSelect = ({
@@ -214,6 +218,7 @@ const ValueSelect = ({
   onChange,
   innerValue,
   fixedType,
+  includeDirection,
 }: ValueSelectProps) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -233,6 +238,24 @@ const ValueSelect = ({
 
   const menu = useMemo(
     () => [
+      ...(includeDirection && !isValueFn
+        ? [
+            <MenuItem
+              key="direction"
+              onClick={() => {
+                onChange({
+                  type: "direction",
+                  value: "left",
+                });
+              }}
+            >
+              <MenuItemIcon>
+                {value.type === "direction" ? <CheckIcon /> : <BlankIcon />}
+              </MenuItemIcon>
+              Direction
+            </MenuItem>,
+          ]
+        : []),
       ...(!isValueFn
         ? [
             <MenuItem
@@ -559,6 +582,24 @@ const ValueSelect = ({
             // units={(args[field.unitsField || ""] || field.unitsDefault) as UnitType}
             // unitsAllowed={field.unitsAllowed}
             // onChangeUnits={onChangeUnits}
+          />
+        </InputGroup>
+      </ValueWrapper>
+    );
+  } else if (value.type === "direction") {
+    input = (
+      <ValueWrapper>
+        <InputGroup>
+          <InputGroupPrepend>{dropdownButton}</InputGroupPrepend>
+          <DirectionPicker
+            id={name}
+            value={value.value}
+            onChange={(newValue: string) => {
+              onChange({
+                type: "direction",
+                value: newValue,
+              });
+            }}
           />
         </InputGroup>
       </ValueWrapper>

@@ -1337,7 +1337,7 @@ class ScriptBuilder {
     }
   };
 
-  _actorSetDirection = (addr: string, asmDir: string) => {
+  _actorSetDirection = (addr: string, asmDir: string | number) => {
     this._addCmd("VM_ACTOR_SET_DIR", addr, asmDir);
   };
 
@@ -2587,6 +2587,55 @@ extern void __mute_mask_${symbol};
     this._actorSetDirection(actorRef, ".DIR_UP");
 
     this._label(endLabel);
+    this._addNL();
+  };
+
+  actorSetDirectionToScriptValue = (actorId: string, value: ScriptValue) => {
+    const actorRef = this._declareLocal("actor", 4);
+    const leftLabel = this.getNextLabel();
+    const rightLabel = this.getNextLabel();
+    const upLabel = this.getNextLabel();
+    const endLabel = this.getNextLabel();
+
+    this._addComment("Actor Set Direction To");
+    const [rpnOps, fetchOps] = precompileScriptValue(
+      optimiseScriptValue(value)
+    );
+    if (rpnOps.length === 1 && rpnOps[0].type === "number") {
+      this.actorSetById(actorId);
+      this._actorSetDirection(actorRef, rpnOps[0].value);
+    } else if (rpnOps.length === 1 && rpnOps[0].type === "direction") {
+      this.actorSetById(actorId);
+      this._actorSetDirection(actorRef, toASMDir(rpnOps[0].value));
+    } else {
+      const localsLookup = this._performFetchOperations(fetchOps);
+      this._addComment(`-- Calculate value`);
+      const rpn = this._rpn();
+      this._performValueRPN(rpn, rpnOps, localsLookup);
+      rpn.stop();
+      this._set(this._localRef(actorRef, 1), ".ARG0");
+      this._stackPop(1);
+      this.actorSetById(actorId);
+      const newValueRef = this._localRef(actorRef, 1);
+      this._ifConst(".EQ", newValueRef, ".DIR_LEFT", leftLabel, 0);
+      this._ifConst(".EQ", newValueRef, ".DIR_RIGHT", rightLabel, 0);
+      this._ifConst(".EQ", newValueRef, ".DIR_UP", upLabel, 0);
+      // Down
+      this._actorSetDirection(actorRef, ".DIR_DOWN");
+      this._jump(endLabel);
+      // Left
+      this._label(leftLabel);
+      this._actorSetDirection(actorRef, ".DIR_LEFT");
+      this._jump(endLabel);
+      // Right
+      this._label(rightLabel);
+      this._actorSetDirection(actorRef, ".DIR_RIGHT");
+      this._jump(endLabel);
+      // Up
+      this._label(upLabel);
+      this._actorSetDirection(actorRef, ".DIR_UP");
+      this._label(endLabel);
+    }
     this._addNL();
   };
 
@@ -4018,6 +4067,10 @@ extern void __mute_mask_${symbol};
         }
         case "indirect": {
           rpn.refInd(rpnOp.value);
+          break;
+        }
+        case "direction": {
+          rpn.int16(toASMDir(rpnOp.value));
           break;
         }
         default: {
