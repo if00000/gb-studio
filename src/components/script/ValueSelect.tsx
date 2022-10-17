@@ -281,9 +281,16 @@ const ValueSelect = ({
             <MenuItem
               key="variable"
               onClick={() => {
+                const defaultVariable =
+                  context === "script"
+                    ? "V0"
+                    : context === "entity"
+                    ? "L0"
+                    : // Default
+                      "0";
                 onChange({
                   type: "variable",
-                  value: "0",
+                  value: defaultVariable,
                 });
               }}
             >
