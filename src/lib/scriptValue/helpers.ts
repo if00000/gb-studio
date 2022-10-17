@@ -6,11 +6,15 @@ import {
 } from "./types";
 
 const boolToInt = (val: boolean) => (val ? 1 : 0);
+const zero = {
+  type: "number",
+  value: 0,
+} as const;
 
 export const optimiseScriptValue = (input: ScriptValue): ScriptValue => {
   if ("valueA" in input && input.type !== "rnd") {
-    const optimisedA = input.valueA && optimiseScriptValue(input.valueA);
-    const optimisedB = input.valueB && optimiseScriptValue(input.valueB);
+    const optimisedA = input.valueA ? optimiseScriptValue(input.valueA) : zero;
+    const optimisedB = input.valueB ? optimiseScriptValue(input.valueB) : zero;
 
     if (optimisedA?.type === "number" && optimisedB?.type === "number") {
       // Can perform constant folding as both inputs are numbers

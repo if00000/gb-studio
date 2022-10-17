@@ -3359,10 +3359,7 @@ extern void __mute_mask_${symbol};
   // --------------------------------------------------------------------------
   // Call Script
 
-  callScript = (
-    scriptId: string,
-    input: Dictionary<string | ScriptBuilderUnionValue>
-  ) => {
+  callScript = (scriptId: string, input: Dictionary<string | ScriptValue>) => {
     const { customEvents } = this.options;
     const customEvent = customEvents.find((ce) => ce.id === scriptId);
 
@@ -3384,18 +3381,46 @@ extern void __mute_mask_${symbol};
     const actorArgs = Object.values(customEvent.actors);
     const variableArgs = Object.values(customEvent.variables);
 
-    const constArgLookup: Record<number, string> = {};
+    const constArgLookup: Record<string, string> = {};
     if (variableArgs) {
       for (const variableArg of variableArgs) {
-        if (variableArg && variableArg.passByReference) {
+        if (variableArg) {
           const variableValue = input?.[`$variable[${variableArg.id}]$`] || "";
+
           if (
             typeof variableValue !== "string" &&
-            variableValue.type === "number"
+            variableValue.type !== "variable" &&
+            variableValue.type !== "number"
           ) {
+            const [rpnOps, fetchOps] = precompileScriptValue(
+              optimiseScriptValue(variableValue)
+            );
             const argRef = this._declareLocal("arg", 1, true);
-            this._setConst(argRef, variableValue.value);
-            constArgLookup[variableValue.value] = argRef;
+
+            if (rpnOps.length === 1 && rpnOps[0].type === "number") {
+              this._setConst(argRef, rpnOps[0].value);
+            } else {
+              const localsLookup = this._performFetchOperations(fetchOps);
+              this._addComment(`-- Calculate value`);
+              const rpn = this._rpn();
+              this._performValueRPN(rpn, rpnOps, localsLookup);
+              rpn.stop();
+              this._set(argRef, ".ARG0");
+              this._stackPop(1);
+            }
+
+            constArgLookup[JSON.stringify(variableValue)] = argRef;
+          } else if (variableArg.passByReference) {
+            const variableValue =
+              input?.[`$variable[${variableArg.id}]$`] || "";
+            if (
+              typeof variableValue !== "string" &&
+              variableValue.type === "number"
+            ) {
+              const argRef = this._declareLocal("arg", 1, true);
+              this._setConst(argRef, variableValue.value);
+              constArgLookup[JSON.stringify(variableValue)] = argRef;
+            }
           }
         }
       }
@@ -3423,11 +3448,6 @@ extern void __mute_mask_${symbol};
             if (typeof variableValue === "string") {
               const variableAlias = this.getVariableAlias(variableValue);
               this._stackPushConst(variableAlias, `Variable ${variableArg.id}`);
-            } else if (variableValue && variableValue.type === "number") {
-              // Arg is union number
-              const argRef = constArgLookup[variableValue.value];
-              this._stackPushReference(argRef, `Variable ${variableArg.id}`);
-              this._markLocalUse(argRef);
             } else if (variableValue && variableValue.type === "variable") {
               // Arg is a union variable
               const variableAlias = this.getVariableAlias(variableValue.value);
@@ -3440,6 +3460,11 @@ extern void __mute_mask_${symbol};
                   `Variable ${variableArg.id}`
                 );
               }
+            } else {
+              // Arg is a script value
+              const argRef = constArgLookup[JSON.stringify(variableValue)];
+              this._stackPushReference(argRef, `Variable ${variableArg.id}`);
+              this._markLocalUse(argRef);
             }
 
             // End of Pass by Reference ----------
@@ -3466,6 +3491,11 @@ extern void __mute_mask_${symbol};
                 // Arg union value is variable id
                 this._stackPush(variableAlias);
               }
+            } else {
+              // Arg is a script value
+              const argRef = constArgLookup[JSON.stringify(variableValue)];
+              this._stackPush(argRef);
+              this._markLocalUse(argRef);
             }
 
             // End of Pass by Value ----------

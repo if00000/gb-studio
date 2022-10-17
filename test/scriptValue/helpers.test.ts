@@ -427,6 +427,41 @@ test("should perform constant folding for nested input", () => {
   });
 });
 
+test("should replace missing values with 0", () => {
+  const input: ScriptValue = {
+    type: "add",
+    valueA: {
+      type: "variable",
+      value: "5",
+    },
+  };
+  expect(optimiseScriptValue(input)).toEqual({
+    type: "add",
+    valueA: {
+      type: "variable",
+      value: "5",
+    },
+    valueB: {
+      type: "number",
+      value: 0,
+    },
+  });
+});
+
+test("should replace missing values with 0 and collapse where possible", () => {
+  const input: ScriptValue = {
+    type: "add",
+    valueA: {
+      type: "number",
+      value: 5,
+    },
+  };
+  expect(optimiseScriptValue(input)).toEqual({
+    type: "number",
+    value: 5,
+  });
+});
+
 test("should precompile to list of required operations", () => {
   const input: ScriptValue = {
     type: "add",

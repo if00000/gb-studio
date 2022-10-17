@@ -353,7 +353,13 @@ const ScriptEventFormInput = ({
       <ValueSelect
         name={id}
         entityId={entityId}
-        value={isScriptValue(value) ? value : undefined}
+        value={
+          isScriptValue(value)
+            ? value
+            : isScriptValue(defaultValue)
+            ? defaultValue
+            : undefined
+        }
         onChange={onChangeField}
         includeDirection={
           isScriptValue(defaultValue)

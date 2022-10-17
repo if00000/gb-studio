@@ -2276,7 +2276,9 @@ const refreshCustomEventArgs: CaseReducer<
             addPropertyActor(actor);
           }
           for (const variable of variables) {
-            addVariable(variable);
+            if (isVariableCustomEvent(variable)) {
+              addVariable(variable);
+            }
           }
         }
       });
