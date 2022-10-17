@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add ability to choose timer context in timer events allowing up to four timers to be used per scene [@patrickmollohan](https://github.com/patrickmollohan)
+- Add event "If Current Scene Is" to allow conditionally running scripts based on the current scene [@patrickmollohan](https://github.com/patrickmollohan)
+- Add ability to set background tile priority for Color games using Priorty tool in colorize section. Priority tiles appear above sprites
 
 ### Changed
 
@@ -19,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed issue where piano roll would scroll vertically when switching patterns [@pau-tomas](https://github.com/pau-tomas)
+- Fix issue where editing a custom script could cause variables to switch back to pass by reference
 
 ### Removed
 
