@@ -8,7 +8,9 @@ import {
   ValueAtom,
   ValueFunction,
 } from "lib/scriptValue/types";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useContext, useMemo, useState } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "store/configureStore";
 import styled, { css } from "styled-components";
 import { Button } from "ui/buttons/Button";
 import { DropdownButton } from "ui/buttons/DropdownButton";
@@ -33,6 +35,7 @@ import {
   MenuItem,
   MenuItemIcon,
 } from "ui/menu/Menu";
+import { ScriptEditorContext } from "./ScriptEditorContext";
 import ScriptEventFormMathArea from "./ScriptEventFormMatharea";
 
 type ValueFunctionMenuItem = {
@@ -220,6 +223,9 @@ const ValueSelect = ({
   fixedType,
   includeDirection,
 }: ValueSelectProps) => {
+  const context = useContext(ScriptEditorContext);
+  const editorType = useSelector((state: RootState) => state.editor.type);
+
   const [isHovered, setIsHovered] = useState(false);
 
   const isValueFn = isValueOperation(value);
@@ -292,8 +298,11 @@ const ValueSelect = ({
               onClick={() => {
                 onChange({
                   type: "property",
-                  target: "",
-                  property: "",
+                  target:
+                    context === "entity" && editorType === "actor"
+                      ? "$self$"
+                      : "player",
+                  property: "xpos",
                 });
               }}
             >
