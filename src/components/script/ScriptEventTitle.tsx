@@ -33,6 +33,8 @@ import styled from "styled-components";
 import { fadeIn } from "ui/animations/animations";
 import { animLabelLookup } from "components/forms/AnimationSpeedSelect";
 import { ScriptEditorContext } from "./ScriptEditorContext";
+import { scriptValueToString } from "lib/scriptValue/format";
+import { isScriptValue } from "lib/scriptValue/types";
 
 interface ScriptEventTitleProps {
   command: string;
@@ -337,6 +339,13 @@ const ScriptEventTitle = ({ command, args = {} }: ScriptEventTitleProps) => {
           return customEventNameForId(value);
         } else if (fieldType === "input") {
           return inputForValue(value);
+        } else if (fieldType === "value" && isScriptValue(value)) {
+          return scriptValueToString(value, {
+            variableNameForId,
+            actorNameForId,
+            propertyNameForId,
+            directionForValue,
+          });
         }
         return String(value);
       };
